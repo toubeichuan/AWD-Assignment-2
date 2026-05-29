@@ -108,6 +108,24 @@ export default function Home() {
     [airports, origin],
   );
 
+  function updateOrigin(nextOrigin: string) {
+    const previousOrigin = origin;
+    setOrigin(nextOrigin);
+
+    if (nextOrigin === destination) {
+      setDestination(previousOrigin);
+    }
+  }
+
+  function updateDestination(nextDestination: string) {
+    const previousDestination = destination;
+    setDestination(nextDestination);
+
+    if (nextDestination === origin) {
+      setOrigin(previousDestination);
+    }
+  }
+
   async function searchFlights(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSearchStatus("Searching scheduled flights...");
@@ -271,12 +289,7 @@ export default function Home() {
                 From
                 <select
                   value={origin}
-                  onChange={(event) => {
-                    setOrigin(event.target.value);
-                    if (event.target.value === destination) {
-                      setDestination("YSSY");
-                    }
-                  }}
+                  onChange={(event) => updateOrigin(event.target.value)}
                 >
                   {airports.map((airport) => (
                     <option key={airport.code} value={airport.code}>
@@ -289,7 +302,7 @@ export default function Home() {
                 To
                 <select
                   value={destination}
-                  onChange={(event) => setDestination(event.target.value)}
+                  onChange={(event) => updateDestination(event.target.value)}
                 >
                   {destinationOptions.map((airport) => (
                     <option key={airport.code} value={airport.code}>
