@@ -81,6 +81,19 @@ const routeNetwork = [
   },
 ];
 
+const routePairs = [
+  { origin: "NZNE", destination: "YSSY" },
+  { origin: "YSSY", destination: "NZNE" },
+  { origin: "NZNE", destination: "NZRO" },
+  { origin: "NZRO", destination: "NZNE" },
+  { origin: "NZNE", destination: "NZGB" },
+  { origin: "NZGB", destination: "NZNE" },
+  { origin: "NZNE", destination: "NZCI" },
+  { origin: "NZCI", destination: "NZNE" },
+  { origin: "NZNE", destination: "NZTL" },
+  { origin: "NZTL", destination: "NZNE" },
+];
+
 export default function Home() {
   const [airports, setAirports] = useState<Airport[]>([]);
   const [origin, setOrigin] = useState("NZNE");
@@ -103,27 +116,48 @@ export default function Home() {
       .catch(() => setSearchStatus("Airports could not be loaded."));
   }, []);
 
-  const destinationOptions = useMemo(
-    () => airports.filter((airport) => airport.code !== origin),
-    [airports, origin],
-  );
+  const originOptions = useMemo(() => {
+    const validOrigins = new Set(routePairs.map((route) => route.origin));
+    return airports.filter((airport) => validOrigins.has(airport.code));
+  }, [airports]);
+
+  const destinationOptions = useMemo(() => {
+    const validDestinations = new Set(destinationsFor(origin));
+    return airports.filter((airport) => validDestinations.has(airport.code));
+  }, [airports, origin]);
 
   function updateOrigin(nextOrigin: string) {
     const previousOrigin = origin;
-    setOrigin(nextOrigin);
+    const validDestinations = destinationsFor(nextOrigin);
+    const fallbackDestination = validDestinations[0] ?? destination;
+    const nextDestination = validDestinations.includes(destination)
+      ? destination
+      : validDestinations.includes(previousOrigin)
+        ? previousOrigin
+        : fallbackDestination;
 
-    if (nextOrigin === destination) {
-      setDestination(previousOrigin);
-    }
+    setOrigin(nextOrigin);
+    setDestination(nextDestination);
+    clearSearchSelection();
   }
 
   function updateDestination(nextDestination: string) {
-    const previousDestination = destination;
     setDestination(nextDestination);
+    clearSearchSelection();
+  }
 
-    if (nextDestination === origin) {
-      setOrigin(previousDestination);
-    }
+  function clearSearchSelection() {
+    setSchedules([]);
+    setSelectedSchedule(null);
+    setInvoice(null);
+    setSearchStatus("");
+    setBookingStatus("");
+  }
+
+  function destinationsFor(routeOrigin: string) {
+    return routePairs
+      .filter((route) => route.origin === routeOrigin)
+      .map((route) => route.destination);
   }
 
   async function searchFlights(event: FormEvent<HTMLFormElement>) {
@@ -291,7 +325,7 @@ export default function Home() {
                   value={origin}
                   onChange={(event) => updateOrigin(event.target.value)}
                 >
-                  {airports.map((airport) => (
+                  {originOptions.map((airport) => (
                     <option key={airport.code} value={airport.code}>
                       {airport.city} ({airport.code})
                     </option>
