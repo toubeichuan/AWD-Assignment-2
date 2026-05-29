@@ -120,21 +120,26 @@ export default function Home() {
       date1,
       date2,
     });
-    const response = await fetch(`/api/schedules?${query.toString()}`);
-    const data = await response.json();
+    try {
+      const response = await fetch(`/api/schedules?${query.toString()}`);
+      const data = await response.json();
 
-    if (!response.ok) {
-      setSearchStatus(data.error ?? "Search failed.");
+      if (!response.ok) {
+        setSearchStatus(data.error ?? "Search failed.");
+        setSchedules([]);
+        return;
+      }
+
+      setSchedules(data.schedules ?? []);
+      setSearchStatus(
+        data.schedules?.length
+          ? `${data.schedules.length} scheduled flight${data.schedules.length === 1 ? "" : "s"} found.`
+          : "No scheduled flights match those dates.",
+      );
+    } catch {
+      setSearchStatus("Search failed because the API is unavailable.");
       setSchedules([]);
-      return;
     }
-
-    setSchedules(data.schedules ?? []);
-    setSearchStatus(
-      data.schedules?.length
-        ? `${data.schedules.length} scheduled flight${data.schedules.length === 1 ? "" : "s"} found.`
-        : "No scheduled flights match those dates.",
-    );
   }
 
   async function bookFlight(event: FormEvent<HTMLFormElement>) {
@@ -156,26 +161,30 @@ export default function Home() {
         email: String(form.get("email")),
       },
     };
-    const response = await fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
 
-    if (!response.ok) {
-      setBookingStatus(data.error ?? "Booking failed.");
-      return;
+      if (!response.ok) {
+        setBookingStatus(data.error ?? "Booking failed.");
+        return;
+      }
+
+      setInvoice(data);
+      setBookingStatus("Booking confirmed.");
+      setSchedules((current) =>
+        current.map((schedule) =>
+          schedule._id === data.schedule._id ? data.schedule : schedule,
+        ),
+      );
+      setSelectedSchedule(data.schedule);
+    } catch {
+      setBookingStatus("Booking failed because the API is unavailable.");
     }
-
-    setInvoice(data);
-    setBookingStatus("Booking confirmed.");
-    setSchedules((current) =>
-      current.map((schedule) =>
-        schedule._id === data.schedule._id ? data.schedule : schedule,
-      ),
-    );
-    setSelectedSchedule(data.schedule);
   }
 
   async function cancelBooking(event: FormEvent<HTMLFormElement>) {
@@ -184,16 +193,20 @@ export default function Home() {
     const bookingRef = String(form.get("bookingRef")).trim().toUpperCase();
     setCancelStatus("Cancelling booking...");
 
-    const response = await fetch(`/api/bookings/${bookingRef}`, { method: "DELETE" });
-    const data = await response.json();
+    try {
+      const response = await fetch(`/api/bookings/${bookingRef}`, { method: "DELETE" });
+      const data = await response.json();
 
-    if (!response.ok) {
-      setCancelStatus(data.error ?? "Cancellation failed.");
-      return;
+      if (!response.ok) {
+        setCancelStatus(data.error ?? "Cancellation failed.");
+        return;
+      }
+
+      setCancelStatus(`Booking ${bookingRef} is cancelled.`);
+      setInvoice(data);
+    } catch {
+      setCancelStatus("Cancellation failed because the API is unavailable.");
     }
-
-    setCancelStatus(`Booking ${bookingRef} is cancelled.`);
-    setInvoice(data);
   }
 
   async function findItinerary(event: FormEvent<HTMLFormElement>) {
@@ -202,21 +215,26 @@ export default function Home() {
     const email = String(form.get("email")).trim().toLowerCase();
     setItineraryStatus("Fetching passenger flights...");
 
-    const response = await fetch(`/api/bookings?email=${encodeURIComponent(email)}`);
-    const data = await response.json();
+    try {
+      const response = await fetch(`/api/bookings?email=${encodeURIComponent(email)}`);
+      const data = await response.json();
 
-    if (!response.ok) {
-      setItineraryStatus(data.error ?? "Passenger search failed.");
+      if (!response.ok) {
+        setItineraryStatus(data.error ?? "Passenger search failed.");
+        setItinerary([]);
+        return;
+      }
+
+      setItinerary(data.schedules ?? []);
+      setItineraryStatus(
+        data.schedules?.length
+          ? `${data.schedules.length} confirmed flight${data.schedules.length === 1 ? "" : "s"} found.`
+          : "No confirmed flights found for that email.",
+      );
+    } catch {
+      setItineraryStatus("Passenger search failed because the API is unavailable.");
       setItinerary([]);
-      return;
     }
-
-    setItinerary(data.schedules ?? []);
-    setItineraryStatus(
-      data.schedules?.length
-        ? `${data.schedules.length} confirmed flight${data.schedules.length === 1 ? "" : "s"} found.`
-        : "No confirmed flights found for that email.",
-    );
   }
 
   return (
