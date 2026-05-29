@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "test:csv": "tsx scripts/test-randomnames.ts"
   },
   "keywords": [],
   "author": "",
