@@ -43,8 +43,11 @@ const routeNetwork = [
     aircraft: "SyberJet SJ30i",
     frequency: "Weekly prestige service",
     gcmap: "http://www.gcmap.com/mapui?P=NZNE-YSSY",
-    x: 36,
-    y: 72,
+    lat: -33.946,
+    lon: 151.177,
+    labelDx: 2,
+    labelDy: -1.8,
+    labelAnchor: "start",
   },
   {
     code: "NZRO",
@@ -53,8 +56,11 @@ const routeNetwork = [
     aircraft: "Cirrus SF50",
     frequency: "Twice every weekday",
     gcmap: "http://www.gcmap.com/mapui?P=NZNE-NZRO",
-    x: 72,
-    y: 49,
+    lat: -38.109,
+    lon: 176.317,
+    labelDx: 2,
+    labelDy: 5.2,
+    labelAnchor: "start",
   },
   {
     code: "NZGB",
@@ -63,8 +69,11 @@ const routeNetwork = [
     aircraft: "Cirrus SF50",
     frequency: "Three times weekly",
     gcmap: "http://www.gcmap.com/mapui?P=NZNE-NZGB",
-    x: 78,
-    y: 37,
+    lat: -36.241,
+    lon: 175.472,
+    labelDx: 1.5,
+    labelDy: -5,
+    labelAnchor: "start",
   },
   {
     code: "NZCI",
@@ -73,8 +82,11 @@ const routeNetwork = [
     aircraft: "HondaJet Elite",
     frequency: "Twice weekly",
     gcmap: "http://www.gcmap.com/mapui?P=NZNE-NZCI",
-    x: 86,
-    y: 65,
+    lat: -43.811,
+    lon: 183.543,
+    labelDx: -2,
+    labelDy: -1.8,
+    labelAnchor: "end",
   },
   {
     code: "NZTL",
@@ -83,10 +95,109 @@ const routeNetwork = [
     aircraft: "HondaJet Elite",
     frequency: "Weekly South Island service",
     gcmap: "http://www.gcmap.com/mapui?P=NZNE-NZTL",
-    x: 69,
-    y: 84,
+    lat: -44.005,
+    lon: 170.445,
+    labelDx: 2,
+    labelDy: -1.8,
+    labelAnchor: "start",
   },
+] as const;
+
+const hubAirport = {
+  code: "NZNE",
+  city: "Dairy Flat",
+  lat: -36.657,
+  lon: 174.655,
+};
+
+const mapBounds = {
+  minLon: 145,
+  maxLon: 185,
+  minLat: -48,
+  maxLat: -28,
+};
+
+const graticuleLongitudes = [150, 160, 170, 180];
+const graticuleLatitudes = [-30, -35, -40, -45];
+
+const landShapes = [
+  [
+    [145.2, -28.2],
+    [151.0, -28.0],
+    [153.9, -30.2],
+    [153.4, -34.5],
+    [151.4, -37.1],
+    [149.8, -39.5],
+    [147.9, -42.0],
+    [145.4, -44.9],
+    [145.2, -28.2],
+  ],
+  [
+    [172.6, -34.4],
+    [175.0, -34.7],
+    [176.5, -36.0],
+    [178.0, -38.5],
+    [176.4, -40.4],
+    [174.2, -39.8],
+    [172.8, -37.3],
+    [172.6, -34.4],
+  ],
+  [
+    [166.2, -40.7],
+    [170.8, -40.6],
+    [174.4, -43.5],
+    [172.1, -46.7],
+    [167.0, -46.0],
+    [165.8, -43.1],
+    [166.2, -40.7],
+  ],
+  [
+    [183.0, -43.4],
+    [184.0, -43.5],
+    [184.1, -44.2],
+    [183.1, -44.4],
+    [182.7, -43.9],
+    [183.0, -43.4],
+  ],
 ];
+
+function projectPoint(lon: number, lat: number) {
+  const x =
+    6 + ((lon - mapBounds.minLon) / (mapBounds.maxLon - mapBounds.minLon)) * 88;
+  const y =
+    6 + ((mapBounds.maxLat - lat) / (mapBounds.maxLat - mapBounds.minLat)) * 88;
+  return { x, y };
+}
+
+function landPath(points: number[][]) {
+  return points
+    .map(([lon, lat], index) => {
+      const point = projectPoint(lon, lat);
+      return `${index === 0 ? "M" : "L"}${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+function routePath(destination: { code: string; lat: number; lon: number }) {
+  const start = projectPoint(hubAirport.lon, hubAirport.lat);
+  const end = projectPoint(destination.lon, destination.lat);
+  const midpoint = {
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2,
+  };
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const distance = Math.hypot(dx, dy) || 1;
+  const bend = destination.code === "YSSY" ? -10 : destination.code === "NZTL" ? 4 : -5;
+  const control = {
+    x: midpoint.x + (-dy / distance) * bend,
+    y: midpoint.y + (dx / distance) * bend,
+  };
+
+  return `M${start.x.toFixed(2)} ${start.y.toFixed(2)} Q${control.x.toFixed(
+    2,
+  )} ${control.y.toFixed(2)} ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+}
 
 export default function Home() {
   const [airports, setAirports] = useState<Airport[]>([]);
@@ -323,51 +434,102 @@ export default function Home() {
             <div className="networkMap" aria-label="Dairy Flat Air route map">
               <svg viewBox="0 0 100 100" role="img" aria-labelledby="route-map-title">
                 <title id="route-map-title">
-                  Great circle route schematic from Dairy Flat Airport
+                  Great circle routes from Dairy Flat Airport
                 </title>
                 <defs>
-                  <linearGradient id="routeLine" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#147c7f" />
-                    <stop offset="100%" stopColor="#d8941c" />
-                  </linearGradient>
+                  <marker
+                    id="routeArrow"
+                    markerHeight="4"
+                    markerWidth="4"
+                    orient="auto"
+                    refX="3"
+                    refY="2"
+                  >
+                    <path d="M0 0 L4 2 L0 4 Z" className="routeArrow" />
+                  </marker>
                 </defs>
-                <path
-                  className="landMass australia"
-                  d="M7 58 C16 49 31 47 42 55 C49 60 49 75 38 84 C27 92 13 84 8 73 C5 67 4 62 7 58 Z"
-                />
-                <path
-                  className="landMass nzNorth"
-                  d="M63 32 C70 29 78 34 80 42 C82 50 77 58 70 59 C63 60 59 53 59 45 C59 39 60 35 63 32 Z"
-                />
-                <path
-                  className="landMass nzSouth"
-                  d="M61 69 C66 62 75 64 78 72 C81 81 74 90 65 91 C57 91 54 83 57 76 C58 73 59 71 61 69 Z"
-                />
-                <path
-                  className="landMass chatham"
-                  d="M88 60 C92 58 96 61 96 65 C96 68 92 71 88 69 C85 67 85 62 88 60 Z"
-                />
+                <rect className="oceanPanel" x="0" y="0" width="100" height="100" />
+                {graticuleLongitudes.map((longitude) => {
+                  const top = projectPoint(longitude, mapBounds.maxLat);
+                  const bottom = projectPoint(longitude, mapBounds.minLat);
+                  return (
+                    <g key={longitude}>
+                      <line
+                        className="graticule"
+                        x1={top.x}
+                        x2={bottom.x}
+                        y1={top.y}
+                        y2={bottom.y}
+                      />
+                      <text className="graticuleLabel" x={top.x + 0.8} y="96">
+                        {longitude}E
+                      </text>
+                    </g>
+                  );
+                })}
+                {graticuleLatitudes.map((latitude) => {
+                  const left = projectPoint(mapBounds.minLon, latitude);
+                  const right = projectPoint(mapBounds.maxLon, latitude);
+                  return (
+                    <g key={latitude}>
+                      <line
+                        className="graticule"
+                        x1={left.x}
+                        x2={right.x}
+                        y1={left.y}
+                        y2={right.y}
+                      />
+                      <text className="graticuleLabel" x="1.8" y={left.y - 0.8}>
+                        {Math.abs(latitude)}S
+                      </text>
+                    </g>
+                  );
+                })}
+                {landShapes.map((shape, index) => (
+                  <path className="landMass" d={`${landPath(shape)} Z`} key={index} />
+                ))}
                 {routeNetwork.map((route) => (
                   <path
                     className="routeArc"
-                    d={`M66 42 Q${(66 + route.x) / 2} ${
-                      Math.min(30, route.y - 16)
-                    } ${route.x} ${route.y}`}
+                    d={routePath(route)}
                     key={route.code}
                   />
                 ))}
-                <circle className="hubNode" cx="66" cy="42" r="3.7" />
-                <text className="mapLabel hubLabel" x="62" y="36">
+                <circle
+                  className="hubNode"
+                  cx={projectPoint(hubAirport.lon, hubAirport.lat).x}
+                  cy={projectPoint(hubAirport.lon, hubAirport.lat).y}
+                  r="2.2"
+                />
+                <text
+                  className="mapLabel hubLabel"
+                  textAnchor="end"
+                  x={projectPoint(hubAirport.lon, hubAirport.lat).x - 2.4}
+                  y={projectPoint(hubAirport.lon, hubAirport.lat).y + 4.8}
+                >
                   NZNE
                 </text>
                 {routeNetwork.map((route) => (
                   <g key={route.code}>
-                    <circle className="routeNode" cx={route.x} cy={route.y} r="2.8" />
-                    <text className="mapLabel" x={route.x + 2.8} y={route.y - 2.8}>
+                    <circle
+                      className="routeNode"
+                      cx={projectPoint(route.lon, route.lat).x}
+                      cy={projectPoint(route.lon, route.lat).y}
+                      r="1.75"
+                    />
+                    <text
+                      className="mapLabel"
+                      textAnchor={route.labelAnchor}
+                      x={projectPoint(route.lon, route.lat).x + route.labelDx}
+                      y={projectPoint(route.lon, route.lat).y + route.labelDy}
+                    >
                       {route.code}
                     </text>
                   </g>
                 ))}
+                <text className="mapTitle" x="6" y="10">
+                  Dairy Flat Air regional route map
+                </text>
               </svg>
             </div>
 
@@ -378,7 +540,7 @@ export default function Home() {
                     <span>{route.code}</span>
                     <h3>{route.city}</h3>
                     <p>
-                      {route.frequency} · {route.aircraft}
+                      {route.country} · {route.frequency} · {route.aircraft}
                     </p>
                   </div>
                   <a href={route.gcmap} target="_blank" rel="noreferrer">
