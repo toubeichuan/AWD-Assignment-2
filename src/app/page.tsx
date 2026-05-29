@@ -4,6 +4,8 @@ import {
   CalendarDays,
   CheckCircle2,
   CircleDollarSign,
+  ExternalLink,
+  MapPin,
   Plane,
   Search,
   Ticket,
@@ -32,6 +34,59 @@ const todayInput = today.toISOString().slice(0, 10);
 const nextMonthInput = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
   .toISOString()
   .slice(0, 10);
+
+const routeNetwork = [
+  {
+    code: "YSSY",
+    city: "Sydney",
+    country: "Australia",
+    aircraft: "SyberJet SJ30i",
+    frequency: "Weekly prestige service",
+    gcmap: "http://www.gcmap.com/mapui?P=NZNE-YSSY",
+    x: 36,
+    y: 72,
+  },
+  {
+    code: "NZRO",
+    city: "Rotorua",
+    country: "New Zealand",
+    aircraft: "Cirrus SF50",
+    frequency: "Twice every weekday",
+    gcmap: "http://www.gcmap.com/mapui?P=NZNE-NZRO",
+    x: 72,
+    y: 49,
+  },
+  {
+    code: "NZGB",
+    city: "Great Barrier",
+    country: "New Zealand",
+    aircraft: "Cirrus SF50",
+    frequency: "Three times weekly",
+    gcmap: "http://www.gcmap.com/mapui?P=NZNE-NZGB",
+    x: 78,
+    y: 37,
+  },
+  {
+    code: "NZCI",
+    city: "Chatham Islands",
+    country: "New Zealand",
+    aircraft: "HondaJet Elite",
+    frequency: "Twice weekly",
+    gcmap: "http://www.gcmap.com/mapui?P=NZNE-NZCI",
+    x: 86,
+    y: 65,
+  },
+  {
+    code: "NZTL",
+    city: "Lake Tekapo",
+    country: "New Zealand",
+    aircraft: "HondaJet Elite",
+    frequency: "Weekly South Island service",
+    gcmap: "http://www.gcmap.com/mapui?P=NZNE-NZTL",
+    x: 69,
+    y: 84,
+  },
+];
 
 export default function Home() {
   const [airports, setAirports] = useState<Airport[]>([]);
@@ -255,6 +310,85 @@ export default function Home() {
             </button>
             <p className="status">{searchStatus}</p>
           </form>
+        </div>
+      </section>
+
+      <section className="routeNetwork" aria-labelledby="route-network-title">
+        <div className="routeNetworkInner">
+          <div className="sectionHeading">
+            <MapPin aria-hidden />
+            <h2 id="route-network-title">Route Network</h2>
+          </div>
+          <div className="routeNetworkGrid">
+            <div className="networkMap" aria-label="Dairy Flat Air route map">
+              <svg viewBox="0 0 100 100" role="img" aria-labelledby="route-map-title">
+                <title id="route-map-title">
+                  Great circle route schematic from Dairy Flat Airport
+                </title>
+                <defs>
+                  <linearGradient id="routeLine" x1="0" x2="1" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#147c7f" />
+                    <stop offset="100%" stopColor="#d8941c" />
+                  </linearGradient>
+                </defs>
+                <path
+                  className="landMass australia"
+                  d="M7 58 C16 49 31 47 42 55 C49 60 49 75 38 84 C27 92 13 84 8 73 C5 67 4 62 7 58 Z"
+                />
+                <path
+                  className="landMass nzNorth"
+                  d="M63 32 C70 29 78 34 80 42 C82 50 77 58 70 59 C63 60 59 53 59 45 C59 39 60 35 63 32 Z"
+                />
+                <path
+                  className="landMass nzSouth"
+                  d="M61 69 C66 62 75 64 78 72 C81 81 74 90 65 91 C57 91 54 83 57 76 C58 73 59 71 61 69 Z"
+                />
+                <path
+                  className="landMass chatham"
+                  d="M88 60 C92 58 96 61 96 65 C96 68 92 71 88 69 C85 67 85 62 88 60 Z"
+                />
+                {routeNetwork.map((route) => (
+                  <path
+                    className="routeArc"
+                    d={`M66 42 Q${(66 + route.x) / 2} ${
+                      Math.min(30, route.y - 16)
+                    } ${route.x} ${route.y}`}
+                    key={route.code}
+                  />
+                ))}
+                <circle className="hubNode" cx="66" cy="42" r="3.7" />
+                <text className="mapLabel hubLabel" x="62" y="36">
+                  NZNE
+                </text>
+                {routeNetwork.map((route) => (
+                  <g key={route.code}>
+                    <circle className="routeNode" cx={route.x} cy={route.y} r="2.8" />
+                    <text className="mapLabel" x={route.x + 2.8} y={route.y - 2.8}>
+                      {route.code}
+                    </text>
+                  </g>
+                ))}
+              </svg>
+            </div>
+
+            <div className="routeList">
+              {routeNetwork.map((route) => (
+                <article className="routeItem" key={route.code}>
+                  <div>
+                    <span>{route.code}</span>
+                    <h3>{route.city}</h3>
+                    <p>
+                      {route.frequency} · {route.aircraft}
+                    </p>
+                  </div>
+                  <a href={route.gcmap} target="_blank" rel="noreferrer">
+                    <ExternalLink aria-hidden />
+                    GCMap
+                  </a>
+                </article>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
